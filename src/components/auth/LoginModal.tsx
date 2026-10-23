@@ -30,23 +30,21 @@ export function LoginModal() {
 
   if (!hasMounted || !showLoginModal) return null;
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     const cleanEmail = loginEmail.trim().toLowerCase();
     const cleanPassword = loginPassword.trim();
 
-    if (!cleanEmail) return;
+    if (!cleanEmail || !cleanPassword) return;
 
-    // Verificación de credenciales de Administradora
+    // Admin bypass (hardcoded admin)
     if (cleanEmail === 'estefaniacontreras@gmail.com') {
       if (cleanPassword === '132604') {
         document.cookie = 'admin_session=true; path=/; max-age=86400';
-        try {
-          localStorage.setItem('admin_session', 'true');
-        } catch {}
-
-        login('estefaniacontreras@gmail.com', 'Estefanía Contreras', 'DOTACIONES & SUMINISTROS', 'ADMIN');
+        try { localStorage.setItem('admin_session', 'true'); } catch {}
+        // No password arg = bypass mode
+        login(cleanEmail, undefined, 'Estefanía Contreras', 'DOTACIONES & SUMINISTROS', 'ADMIN');
         closeLoginModal();
         window.location.href = '/admin/dashboard';
         return;
@@ -56,24 +54,41 @@ export function LoginModal() {
       }
     }
 
-    login(cleanEmail, 'Cliente Registrado', '', 'USER');
-
-    if (pendingProductToAdd) {
-      addItem(pendingProductToAdd.product, pendingProductToAdd.quantity || 1);
+    // Login normal contra Supabase
+    try {
+      await login(cleanEmail, cleanPassword);
+      if (pendingProductToAdd) {
+        addItem(pendingProductToAdd.product, pendingProductToAdd.quantity || 1);
+      }
+    } catch (err: any) {
+      const msg: string = err?.message || '';
+      if (msg.toLowerCase().includes('invalid login credentials') || msg.toLowerCase().includes('invalid credentials')) {
+        setErrorMessage('Correo o contraseña incorrectos. Si acaba de registrarse, verifique su email y confirme la cuenta antes de iniciar sesión.');
+      } else if (msg.toLowerCase().includes('email not confirmed')) {
+        setErrorMessage('Debe confirmar su correo electrónico antes de iniciar sesión. Revise su bandeja de entrada.');
+      } else {
+        setErrorMessage(msg || 'Error al iniciar sesión. Intente de nuevo.');
+      }
     }
-    closeLoginModal();
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    if (!regEmail.trim() || !regName.trim()) return;
+    if (!regEmail.trim() || !regName.trim() || !regPassword.trim()) return;
 
-    setMessage('¡Cuenta creada e iniciada exitosamente!');
-    login(regEmail.trim(), regName.trim(), regCompany.trim(), 'USER');
-
-    if (pendingProductToAdd) {
-      addItem(pendingProductToAdd.product, pendingProductToAdd.quantity || 1);
+    const { signUp } = useUserAuthStore.getState();
+    try {
+      await signUp(regEmail.trim(), regPassword.trim(), regName.trim(), regCompany.trim(), regPhone.trim(), 'USER');
+      setMessage('¡Cuenta creada e iniciada exitosamente!');
+      if (pendingProductToAdd) {
+        addItem(pendingProductToAdd.product, pendingProductToAdd.quantity || 1);
+      }
+      closeLoginModal();
+    } catch (err) {
+      console.error(err);
+      setErrorMessage('Error al crear la cuenta.');
     }
   };
 

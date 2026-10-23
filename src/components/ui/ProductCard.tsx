@@ -90,9 +90,15 @@ export function ProductCard({ product }: ProductCardProps) {
         <div className="mt-5 pt-4 border-t border-slate-100">
           <div className="flex items-baseline justify-between mb-4">
             <span className="text-[11px] font-medium text-slate-400 uppercase">Precio Unitario</span>
-            <span className="text-lg font-extrabold text-[#0F172A]">
-              {formatCurrency(product.price)}
-            </span>
+            {product.discount && product.discount > 0 ? (
+              <div className="flex items-center gap-2">
+                <span className="line-through text-sm text-slate-500">{formatCurrency(product.price)}</span>
+                <span className="text-lg font-extrabold text-[#0F172A]">{formatCurrency(product.price * (1 - product.discount / 100))}</span>
+                <span className="text-xs font-medium text-[#F97316]">-{product.discount}%</span>
+              </div>
+            ) : (
+              <span className="text-lg font-extrabold text-[#0F172A]">{formatCurrency(product.price)}</span>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-2">

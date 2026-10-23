@@ -12,6 +12,7 @@ export interface ProductFormData {
   main_image_url?: string;
   featured?: boolean;
   active?: boolean;
+  discount?: number; // porcentaje 0-100
 }
 
 function slugify(text: string): string {
@@ -32,6 +33,7 @@ export async function createProductAction(data: ProductFormData) {
     if (!data.category_id) return { success: false, error: 'Debe seleccionar una categoría.' };
     if (data.price === undefined || data.price < 0) return { success: false, error: 'El precio debe ser mayor o igual a 0.' };
     if (data.stock === undefined || data.stock < 0) return { success: false, error: 'El stock debe ser mayor o igual a 0.' };
+    if (data.discount !== undefined && (data.discount < 0 || data.discount > 100)) return { success: false, error: 'El descuento debe estar entre 0 y 100.' };
 
     const baseSlug = slugify(data.name);
     const uniqueSlug = `${baseSlug}-${Math.floor(100 + Math.random() * 900)}`;
@@ -45,6 +47,7 @@ export async function createProductAction(data: ProductFormData) {
         slug: uniqueSlug,
         category_id: data.category_id,
         price: Number(data.price),
+        discount: data.discount ?? 0,
         stock: Number(data.stock),
         description: data.description?.trim() || '',
         main_image_url: data.main_image_url?.trim() || null,
@@ -84,6 +87,7 @@ export async function updateProductAction(id: string, data: ProductFormData) {
         name: data.name.trim(),
         category_id: data.category_id,
         price: Number(data.price),
+        discount: data.discount ?? 0,
         stock: Number(data.stock),
         description: data.description?.trim() || '',
         main_image_url: data.main_image_url?.trim() || null,

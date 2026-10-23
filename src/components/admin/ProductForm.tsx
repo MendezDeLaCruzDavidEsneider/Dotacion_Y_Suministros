@@ -20,6 +20,7 @@ export function ProductForm({ categories, initialData, isEdit = false }: Product
     name: initialData?.name || '',
     category_id: initialData?.category_id || (categories[0]?.id || ''),
     price: initialData?.price !== undefined ? initialData.price : 50000,
+    discount: initialData?.discount !== undefined ? initialData.discount : 0,
     stock: initialData?.stock !== undefined ? initialData.stock : 20,
     description: initialData?.description || '',
     main_image_url: initialData?.main_image_url || '',
@@ -149,6 +150,21 @@ export function ProductForm({ categories, initialData, isEdit = false }: Product
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
                 className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-bold text-[#0F172A] focus:bg-white focus:ring-2 focus:ring-[#0284C7] focus:outline-hidden"
+              />
+            </div>
+            {/* Descuento en % */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5 mt-2">
+                Descuento (%)
+              </label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={formData.discount}
+                onChange={(e) => setFormData({ ...formData, discount: Number(e.target.value) })}
+                className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs focus:bg-white focus:ring-2 focus:ring-[#0284C7] focus:outline-hidden"
               />
             </div>
 

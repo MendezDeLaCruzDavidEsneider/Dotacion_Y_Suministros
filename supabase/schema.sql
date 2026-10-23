@@ -136,7 +136,7 @@ BEGIN
     new.id,
     COALESCE(new.raw_user_meta_data->>'full_name', new.email),
     new.email,
-    'ADMIN' -- Primeros registrados asignados como ADMIN si se requiere
+    CASE WHEN new.email = 'estefaniacontreras@gmail.com' THEN 'ADMIN' ELSE 'USER' END -- Role assignment
   );
   RETURN NEW;
 END;

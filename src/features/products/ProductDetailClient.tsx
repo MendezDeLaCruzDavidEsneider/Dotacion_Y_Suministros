@@ -127,9 +127,15 @@ export function ProductDetailClient({ product }: ProductDetailClientProps) {
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider block">
               Precio Unitario de Cotización
             </span>
-            <span className="text-3xl font-black text-[#0F172A]">
-              {formatCurrency(product.price)}
-            </span>
+            {product.discount && product.discount > 0 ? (
+                <div className="flex items-center gap-2">
+    <span className="line-through text-sm text-slate-500">{formatCurrency(product.price)}</span>
+    <span className="text-3xl font-black text-[#0F172A]">{formatCurrency(product.price * (1 - product.discount / 100))}</span>
+    <span className="text-xs font-medium text-[#F97316]">-{product.discount}%</span>
+  </div>
+            ) : (
+  <span className="text-3xl font-black text-[#0F172A]">{formatCurrency(product.price)}</span>
+)}
           </div>
           <span className="text-[11px] font-medium text-slate-400">Sin Impuestos Aplicables</span>
         </div>

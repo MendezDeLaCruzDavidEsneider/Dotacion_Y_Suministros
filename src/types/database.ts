@@ -38,6 +38,7 @@ export interface Product {
   slug: string;
   description: string;
   price: number;
+  discount?: number; // porcentaje de descuento (0-100)
   stock: number;
   active: boolean;
   featured: boolean;

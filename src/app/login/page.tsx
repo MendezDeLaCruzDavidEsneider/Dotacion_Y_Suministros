@@ -26,24 +26,20 @@ export default function UserLoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     const cleanEmail = loginEmail.trim().toLowerCase();
     const cleanPassword = loginPassword.trim();
 
-    if (!cleanEmail) return;
+    if (!cleanEmail || !cleanPassword) return;
 
-    // Verificación de credenciales de Administradora
+    // Admin bypass
     if (cleanEmail === 'estefaniacontreras@gmail.com') {
       if (cleanPassword === '132604') {
-        // Asignar sesión administrativa
         document.cookie = 'admin_session=true; path=/; max-age=86400';
-        try {
-          localStorage.setItem('admin_session', 'true');
-        } catch {}
-
-        login('estefaniacontreras@gmail.com', 'Estefanía Contreras', 'DOTACIONES & SUMINISTROS', 'ADMIN');
+        try { localStorage.setItem('admin_session', 'true'); } catch {}
+        login(cleanEmail, undefined, 'Estefanía Contreras', 'DOTACIONES & SUMINISTROS', 'ADMIN');
         window.location.href = '/admin/dashboard';
         return;
       } else {
@@ -52,20 +48,31 @@ export default function UserLoginPage() {
       }
     }
 
-    // Acceso para clientes generales
-    login(cleanEmail, 'Cliente Registrado', '', 'USER');
-    router.push('/productos');
+    // Login normal via Supabase
+    try {
+      await login(cleanEmail, cleanPassword);
+      router.push('/productos');
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Correo o contraseña incorrectos.');
+    }
   };
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    if (!regEmail.trim() || !regName.trim()) return;
+    if (!regEmail.trim() || !regName.trim() || !regPassword.trim()) return;
 
-    setMessage('¡Cuenta registrada exitosamente!');
-    login(regEmail.trim(), regName.trim(), regCompany.trim(), 'USER');
-    router.push('/productos');
+    const { signUp } = useUserAuthStore.getState();
+    try {
+      await signUp(regEmail.trim(), regPassword.trim(), regName.trim(), regCompany.trim(), regPhone.trim(), 'USER');
+      setMessage('¡Cuenta registrada exitosamente!');
+      router.push('/productos');
+    } catch (err: any) {
+      setErrorMessage(err?.message || 'Error al crear la cuenta.');
+    }
   };
+
 
   return (
     <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 bg-slate-50">
