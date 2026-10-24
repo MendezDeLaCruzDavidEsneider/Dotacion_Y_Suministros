@@ -86,9 +86,23 @@ export default function CartPage() {
                         {item.product.name}
                       </Link>
                     </h3>
-                    <p className="text-xs font-semibold text-slate-500 mt-1">
-                      Precio Unitario: {formatCurrency(item.product.price)}
-                    </p>
+                    {item.product.discount && item.product.discount > 0 ? (
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-slate-400 line-through">
+                          {formatCurrency(item.product.price)}
+                        </span>
+                        <span className="text-xs font-bold text-[#0284C7]">
+                          {formatCurrency(item.product.price * (1 - item.product.discount / 100))}
+                        </span>
+                        <span className="text-[10px] text-[#F97316] font-bold bg-orange-50 px-1.5 py-0.5 rounded">
+                          -{item.product.discount}% Descuento
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="text-xs font-semibold text-slate-500 mt-1">
+                        Precio Unitario: {formatCurrency(item.product.price)}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -115,7 +129,11 @@ export default function CartPage() {
                   <div className="text-right shrink-0">
                     <span className="block text-[10px] text-slate-400 font-semibold uppercase">Subtotal</span>
                     <span className="text-sm font-extrabold text-[#0F172A]">
-                      {formatCurrency(item.product.price * item.quantity)}
+                      {formatCurrency(
+                        (item.product.discount && item.product.discount > 0
+                          ? item.product.price * (1 - item.product.discount / 100)
+                          : item.product.price) * item.quantity
+                      )}
                     </span>
                   </div>
 

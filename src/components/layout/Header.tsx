@@ -19,6 +19,7 @@ import {
   Wrench,
   FileText,
   Sparkles,
+  ClipboardList,
 } from 'lucide-react';
 import { useCartStore } from '@/features/cart/cartStore';
 import { useUserAuthStore } from '@/features/auth/userAuthStore';
@@ -212,21 +213,38 @@ export function Header() {
             
             {/* Estado de Usuario (Sesión de Cliente) */}
             {currentUser ? (
-              <div className="flex items-center gap-2 bg-slate-100 p-1.5 pr-3 rounded-xl border border-slate-200">
-                <div className="w-7 h-7 rounded-lg bg-[#0F172A] text-white flex items-center justify-center font-bold text-xs">
-                  {currentUser.name.charAt(0)}
-                </div>
-                <div className="hidden xl:flex flex-col text-left">
-                  <span className="text-xs font-bold text-slate-900 leading-tight">{currentUser.name}</span>
-                  <span className="text-[9px] text-slate-500 truncate max-w-[120px]">{currentUser.email}</span>
-                </div>
-                <button
-                  onClick={logout}
-                  className="p-1 text-slate-400 hover:text-red-600 transition"
-                  title="Cerrar Sesión"
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/historial-servicios"
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-[#0284C7]/10 hover:bg-[#0284C7]/20 text-[#0284C7] font-bold text-xs rounded-xl transition border border-[#0284C7]/20"
+                  title="Ver mis pedidos y servicios"
                 >
-                  <LogOut className="w-4 h-4" />
-                </button>
+                  <ClipboardList className="w-3.5 h-3.5" />
+                  <span>Mis Servicios</span>
+                </Link>
+
+                <div className="flex items-center gap-2 bg-slate-100 p-1.5 pr-2.5 rounded-xl border border-slate-200">
+                  <Link
+                    href="/historial-servicios"
+                    className="flex items-center gap-2 hover:opacity-80 transition"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-[#0F172A] text-white flex items-center justify-center font-bold text-xs">
+                      {currentUser.name.charAt(0)}
+                    </div>
+                    <div className="hidden xl:flex flex-col text-left">
+                      <span className="text-xs font-bold text-slate-900 leading-tight truncate max-w-[120px]">{currentUser.name}</span>
+                      <span className="text-[9px] text-slate-500 truncate max-w-[120px]">{currentUser.company || currentUser.email}</span>
+                    </div>
+                  </Link>
+
+                  <button
+                    onClick={logout}
+                    className="p-1 text-slate-400 hover:text-red-600 transition"
+                    title="Cerrar Sesión"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             ) : (
               <button
@@ -301,6 +319,11 @@ export function Header() {
             <Link href="/productos" onClick={() => setMobileMenuOpen(false)} className="px-2 py-1.5 hover:bg-slate-50 rounded-md">
               Catálogo Completo
             </Link>
+            {currentUser && (
+              <Link href="/historial-servicios" onClick={() => setMobileMenuOpen(false)} className="px-2 py-1.5 text-[#0284C7] font-bold hover:bg-slate-50 rounded-md flex items-center gap-2">
+                <ClipboardList className="w-4 h-4" /> Mis Servicios y Pedidos
+              </Link>
+            )}
             <Link href="/admin/dashboard" onClick={() => setMobileMenuOpen(false)} className="px-2 py-1.5 text-slate-500 hover:bg-slate-50 rounded-md">
               Panel Administrativo
             </Link>

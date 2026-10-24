@@ -25,8 +25,8 @@ export const MOCK_CATEGORIES: Category[] = [
   },
   {
     id: 'c3333333-3333-3333-3333-333333333333',
-    name: 'aapelería',
-    slug: 'aapeleria',
+    name: 'Papelería',
+    slug: 'papeleria',
     description: 'Suministros de oficina, resmas de papel, útiles de escritura, carpetas y consumibles corporativos.',
     image_url: 'https://images.unsplash.com/photo-1586075010923-2dd4570fb338?auto=format&fit=crop&q=80&w=800',
     active: true,
@@ -193,7 +193,7 @@ export const MOCK_PRODUCTS: Product[] = [
     updated_at: new Date().toISOString(),
     category: MOCK_CATEGORIES[3],
     product_features: [
-      { id: 'f12', product_id: 'a4444441-4444-4444-4444-444444444444', name: 'aresentación', value: 'Galón 5 Litros', created_at: '' },
+      { id: 'f12', product_id: 'a4444441-4444-4444-4444-444444444444', name: 'Presentación', value: 'Galón 5 Litros', created_at: '' },
       { id: 'f13', product_id: 'a4444441-4444-4444-4444-444444444444', name: 'Certificación', value: 'INVIMA Vigente', created_at: '' },
     ],
   },

@@ -4,26 +4,41 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCartStore } from '@/features/cart/cartStore';
+import { useUserAuthStore } from '@/features/auth/userAuthStore';
 import { formatCurrency } from '@/lib/utils';
 import { useHydration } from '@/lib/useHydration';
 import { createOrderAction } from '@/features/orders/actions';
-import { ShieldCheck, ArrowLeft, Send, Building2, User, Mail, Phone, MapPin, FileText, AlertCircle } from 'lucide-react';
+import { ShieldCheck, ArrowLeft, Send, Building2, User, Mail, Phone, MapPin, FileText, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function CheckoutPage() {
   const hasMounted = useHydration();
   const router = useRouter();
   const { items, getSubtotal, clearCart } = useCartStore();
+  const { user } = useUserAuthStore();
   const subtotal = hasMounted ? getSubtotal() : 0;
   const cartItems = hasMounted ? items : [];
 
   const [formData, setFormData] = useState({
-    customer_name: '',
-    company_name: '',
-    email: '',
-    phone: '',
+    customer_name: user?.name || '',
+    company_name: user?.company || '',
+    email: user?.email || '',
+    phone: user?.phone || '',
     address: '',
     notes: '',
   });
+
+  // Efecto para sincronizar datos del usuario cuando se monte o cambie
+  React.useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        customer_name: prev.customer_name || user.name || '',
+        company_name: prev.company_name || user.company || '',
+        email: prev.email || user.email || '',
+        phone: prev.phone || user.phone || '',
+      }));
+    }
+  }, [user]);
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -244,17 +259,30 @@ export default function CheckoutPage() {
             </h2>
 
             <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto pr-1">
-              {cartItems.map((item) => (
-                <div key={item.product.id} className="py-3 flex justify-between items-center text-xs">
-                  <div className="min-w-0 flex-1 pr-2">
-                    <span className="font-bold text-slate-900 block truncate">{item.product.name}</span>
-                    <span className="text-slate-500">{item.quantity} x {formatCurrency(item.product.price)}</span>
+              {cartItems.map((item) => {
+                const hasDiscount = item.product.discount && item.product.discount > 0;
+                const unitPrice = hasDiscount
+                  ? item.product.price * (1 - item.product.discount! / 100)
+                  : item.product.price;
+                return (
+                  <div key={item.product.id} className="py-3 flex justify-between items-center text-xs">
+                    <div className="min-w-0 flex-1 pr-2">
+                      <span className="font-bold text-slate-900 block truncate">{item.product.name}</span>
+                      <div className="text-slate-500 flex items-center gap-1.5">
+                        <span>{item.quantity} x {formatCurrency(unitPrice)}</span>
+                        {hasDiscount && (
+                          <span className="text-[10px] text-[#F97316] font-bold bg-orange-50 px-1 rounded">
+                            -{item.product.discount}%
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <span className="font-extrabold text-[#0F172A] shrink-0">
+                      {formatCurrency(unitPrice * item.quantity)}
+                    </span>
                   </div>
-                  <span className="font-extrabold text-[#0F172A] shrink-0">
-                    {formatCurrency(item.product.price * item.quantity)}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <div className="bg-slate-50 p-4 rounded-xl space-y-2 border border-slate-200 text-xs">

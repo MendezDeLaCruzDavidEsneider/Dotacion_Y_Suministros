@@ -87,10 +87,13 @@ export const useCartStore = create<CartState>()(
       },
 
       getSubtotal: () => {
-        return get().items.reduce(
-          (total, item) => total + item.product.price * item.quantity,
-          0
-        );
+        return get().items.reduce((total, item) => {
+          const hasDiscount = item.product.discount !== undefined && item.product.discount > 0;
+          const effectivePrice = hasDiscount
+            ? item.product.price * (1 - item.product.discount! / 100)
+            : item.product.price;
+          return total + effectivePrice * item.quantity;
+        }, 0);
       },
 
       getTotal: () => {

@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { CheckCircle2, FileText, ArrowRight, Phone, MessageSquare, Download, Building2 } from 'lucide-react';
+import { CheckCircle2, ArrowRight, MessageSquare, Building2, Clock, ShieldCheck } from 'lucide-react';
 
 interface OrderConfirmedPageProps {
   params: Promise<{
@@ -13,7 +13,6 @@ export default async function OrderConfirmedPage({ params }: OrderConfirmedPageP
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-16 space-y-8 text-center">
-      
       {/* Icono de Éxito */}
       <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600 mx-auto animate-bounce">
         <CheckCircle2 className="w-12 h-12" />
@@ -27,12 +26,12 @@ export default async function OrderConfirmedPage({ params }: OrderConfirmedPageP
           Su pedido ha sido recibido
         </h1>
         <p className="text-sm text-slate-600 max-w-xl mx-auto leading-relaxed">
-          Gracias por confiar en <strong className="text-slate-900">DOTACIONES & SUMINISTROS</strong>. Un asesor comercial revisará la solicitud y se pondrá en contacto con su organización.
+          Gracias por confiar en <strong className="text-slate-900">DOTACIONES & SUMINISTROS</strong>. Un asesor comercial revisará la solicitud y coordinará la atención formal.
         </p>
       </div>
 
-      {/* Tarjeta del Número de Pedido */}
-      <div className="bg-white border-2 border-slate-200 rounded-3xl p-6 sm:p-8 shadow-md max-w-lg mx-auto space-y-4">
+      {/* Tarjeta del Número de Pedido y Acción Única de WhatsApp */}
+      <div className="bg-white border-2 border-slate-200 rounded-3xl p-6 sm:p-8 shadow-md max-w-lg mx-auto space-y-5">
         <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block">
           Identificador Único de Cotización
         </span>
@@ -43,22 +42,27 @@ export default async function OrderConfirmedPage({ params }: OrderConfirmedPageP
           Conserve este número para consultar el estado o realizar seguimiento comercial.
         </p>
 
-        {/* Acciones Rápidas Comercial (WhatsApp / Descarga) */}
-        <div className="pt-4 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {/* Notificación para Agilidad y Mayor Eficiencia */}
+        <div className="pt-4 border-t border-slate-100 space-y-3 text-left">
+          <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl p-4 text-xs text-emerald-900 flex items-start gap-3">
+            <Clock className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            <p className="leading-relaxed">
+              <strong>Para mayor eficiencia y agilidad en el despacho de su pedido</strong>, por favor notifique a nuestro asesor comercial directamente al WhatsApp con su número de solicitud.
+            </p>
+          </div>
+
+          {/* Botón Exclusivo de WhatsApp */}
           <a
-            href={`https://wa.me/573000000000?text=${encodeURIComponent(`Hola, acabo de realizar la solicitud de cotización número ${id} en su página web.`)}`}
+            href={`https://wa.me/573000000000?text=${encodeURIComponent(
+              `Hola, acabo de registrar la solicitud de pedido número ${id} en su página web y deseo confirmar la atención y despacho.`
+            )}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition flex items-center justify-center gap-2"
+            className="w-full py-4 px-6 bg-[#25D366] hover:bg-[#20bd5a] text-white font-extrabold text-sm rounded-2xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2.5 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
           >
-            <MessageSquare className="w-4 h-4" /> Notificar por WhatsApp
+            <MessageSquare className="w-5 h-5 fill-current" />
+            <span>Notificar al WhatsApp</span>
           </a>
-          <button
-            onClick={undefined}
-            className="py-3 px-4 bg-[#0F172A] hover:bg-[#0284C7] text-white font-bold text-xs rounded-xl transition flex items-center justify-center gap-2"
-          >
-            <Download className="w-4 h-4" /> Guardar Resumen
-          </button>
         </div>
       </div>
 
@@ -74,7 +78,7 @@ export default async function OrderConfirmedPage({ params }: OrderConfirmedPageP
         </ol>
       </div>
 
-      <div className="pt-4">
+      <div className="pt-2">
         <Link
           href="/productos"
           className="inline-flex items-center gap-2 px-6 py-3.5 bg-[#0284C7] text-white font-extrabold text-xs rounded-xl shadow-md hover:bg-[#0284C7]/90 transition"
@@ -82,7 +86,6 @@ export default async function OrderConfirmedPage({ params }: OrderConfirmedPageP
           Volver al Catálogo <ArrowRight className="w-4 h-4" />
         </Link>
       </div>
-
     </div>
   );
 }

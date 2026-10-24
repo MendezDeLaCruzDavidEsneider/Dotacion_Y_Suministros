@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUserAuthStore } from '@/features/auth/userAuthStore';
 import { Logo } from '@/components/ui/Logo';
-import { Mail, Lock, User, Building2, Phone, ShieldCheck, ArrowRight, UserPlus, LogIn } from 'lucide-react';
+import { Mail, Lock, User, Building2, Phone, ShieldCheck, ArrowRight, UserPlus, LogIn, Loader2 } from 'lucide-react';
 
 export default function UserLoginPage() {
   const router = useRouter();
@@ -23,12 +23,14 @@ export default function UserLoginPage() {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setMessage(null);
     const cleanEmail = loginEmail.trim().toLowerCase();
     const cleanPassword = loginPassword.trim();
 
@@ -49,27 +51,51 @@ export default function UserLoginPage() {
     }
 
     // Login normal via Supabase
+    setLoading(true);
     try {
       await login(cleanEmail, cleanPassword);
       router.push('/productos');
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Correo o contraseña incorrectos.');
+      const msg: string = err?.message || '';
+      if (msg.toLowerCase().includes('invalid login credentials') || msg.toLowerCase().includes('invalid credentials')) {
+        setErrorMessage('Correo o contraseña incorrectos. Si acaba de registrarse, verifique si su cuenta requiere confirmación por correo electrónico.');
+      } else if (msg.toLowerCase().includes('email not confirmed')) {
+        setErrorMessage('Debe confirmar su correo electrónico antes de iniciar sesión. Revise su bandeja de entrada.');
+      } else {
+        setErrorMessage(msg || 'Error al iniciar sesión con Supabase. Intente de nuevo.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
-
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    if (!regEmail.trim() || !regName.trim() || !regPassword.trim()) return;
+    setMessage(null);
+    if (!regEmail.trim() || !regName.trim() || !regPassword.trim()) {
+      setErrorMessage('Por favor complete todos los campos obligatorios (*).');
+      return;
+    }
 
+    if (regPassword.length < 6) {
+      setErrorMessage('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    setLoading(true);
     const { signUp } = useUserAuthStore.getState();
     try {
       await signUp(regEmail.trim(), regPassword.trim(), regName.trim(), regCompany.trim(), regPhone.trim(), 'USER');
-      setMessage('¡Cuenta registrada exitosamente!');
-      router.push('/productos');
+      setMessage('¡Cuenta registrada exitosamente en la base de datos!');
+      setTimeout(() => {
+        router.push('/productos');
+      }, 1000);
     } catch (err: any) {
-      setErrorMessage(err?.message || 'Error al crear la cuenta.');
+      console.error('[Register Page Error]:', err);
+      setErrorMessage(err?.message || 'Error al crear la cuenta en la base de datos.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -168,9 +194,18 @@ export default function UserLoginPage() {
 
             <button
               type="submit"
-              className="w-full py-3.5 px-4 bg-[#0F172A] hover:bg-[#0284C7] text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full py-3.5 px-4 bg-[#0F172A] hover:bg-[#0284C7] text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
             >
-              Iniciar Sesión <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Verificando sesión...
+                </>
+              ) : (
+                <>
+                  Iniciar Sesión <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
         )}
@@ -266,9 +301,18 @@ export default function UserLoginPage() {
 
             <button
               type="submit"
-              className="w-full py-3.5 px-4 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full py-3.5 px-4 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
             >
-              Crear Cuenta y Explorar <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Registrando usuario en base de datos...
+                </>
+              ) : (
+                <>
+                  Crear Cuenta y Explorar <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
         )}

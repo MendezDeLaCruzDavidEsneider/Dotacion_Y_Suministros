@@ -4,14 +4,14 @@ import { ArrowRight, ShieldCheck, Truck, Clock, Award, Building2, ChevronRight }
 import { getCategories } from '@/services/categories.service';
 import { getProducts } from '@/services/products.service';
 import { CategoryCard } from '@/components/ui/CategoryCard';
-import { ProductCard } from '@/components/ui/ProductCard';
+import { HomePaginatedProducts } from '@/components/ui/HomePaginatedProducts';
 
 export const revalidate = 60; // Revalidar cada 60 segundos (ISR)
 
 export default async function HomePage() {
-  const [categories, featuredProducts] = await Promise.all([
+  const [categories, allProducts] = await Promise.all([
     getCategories(),
-    getProducts({ featuredOnly: true }),
+    getProducts(),
   ]);
 
   return (
@@ -201,31 +201,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 4. PRODUCTOS DESTACADOS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-          <div>
-            <span className="text-[#F97316] font-bold text-xs uppercase tracking-wider block">
-              Selección Recomendada
-            </span>
-            <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
-              Productos Destacados
-            </h2>
-          </div>
-          <Link
-            href="/productos"
-            className="text-xs font-bold text-[#0F172A] hover:text-[#0284C7] flex items-center gap-1 transition"
-          >
-            Ver todo el catálogo <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {featuredProducts.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      </section>
+      {/* 4. PRODUCTOS DISPONIBLES CON PAGINACIÓN Y FILTROS */}
+      <HomePaginatedProducts products={allProducts} categories={categories} itemsPerPage={8} />
 
       {/* 5. SECCIÓN ACERCA DE LA EMPRESA */}
       <section id="nosotros" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">

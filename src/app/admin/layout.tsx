@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Package, Layers, ShoppingBag, LogOut, ExternalLink, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Package, Layers, ShoppingBag, LogOut, ExternalLink, ShieldCheck, Users } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { Logo } from '@/components/ui/Logo';
 
@@ -37,6 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { label: 'Gestión de Productos', href: '/admin/productos', icon: Package },
     { label: 'Categorías', href: '/admin/categorias', icon: Layers },
     { label: 'Pedidos / Cotizaciones', href: '/admin/pedidos', icon: ShoppingBag },
+    { label: 'Usuarios / Clientes', href: '/admin/usuarios', icon: Users },
   ];
 
   return (

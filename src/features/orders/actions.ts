@@ -1,9 +1,13 @@
 'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createAdminClient } from '@/lib/supabase/server';
+import { revalidatePath } from 'next/cache';
 import { CreateOrderInput } from '@/types';
 import { z } from 'zod';
 import { MOCK_PRODUCTS } from '@/services/mockData';
+
+const isPostgresUUID = (id: string) =>
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
 
 const checkoutSchema = z.object({
   customer_name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
@@ -14,7 +18,7 @@ const checkoutSchema = z.object({
   notes: z.string().optional(),
   items: z.array(
     z.object({
-      product_id: z.string().uuid('ID de producto inválido'),
+      product_id: z.string().min(1, 'ID de producto inválido'),
       quantity: z.number().int().positive('La cantidad debe ser mayor a cero'),
     })
   ).min(1, 'El pedido debe contener al menos un producto'),
@@ -27,27 +31,44 @@ export async function createOrderAction(input: CreateOrderInput) {
 
     const supabase = await createClient();
     const productIds = validatedData.items.map((i) => i.product_id);
+    const validDbIds = productIds.filter(isPostgresUUID);
 
     // 2. Consultar PRECIOS REALES directamente en la base de datos (NUNCA confiar en precios del cliente)
-    let realProducts: { id: string; name: string; price: number; active: boolean; stock: number }[] = [];
+    let realProducts: { id: string; name: string; price: number; active: boolean; stock: number; discount?: number }[] = [];
 
-    const { data: dbProducts, error: fetchError } = await supabase
-      .from('products')
-      .select('id, name, price, active, stock')
-      .in('id', productIds);
+    if (validDbIds.length > 0) {
+      const { data: dbProducts, error: fetchError } = await supabase
+        .from('products')
+        .select('id, name, price, active, stock, discount')
+        .in('id', validDbIds);
 
-    if (!fetchError && dbProducts && dbProducts.length > 0) {
-      realProducts = dbProducts as typeof realProducts;
-    } else {
-      // Fallback para desarrollo sin Supabase en vivo aún conectado
-      realProducts = MOCK_PRODUCTS.filter((p) => productIds.includes(p.id));
+      if (!fetchError && dbProducts && dbProducts.length > 0) {
+        realProducts = dbProducts as typeof realProducts;
+      } else {
+        // Si la consulta falló por columna discount inexistente, reintentar sin discount
+        const { data: fallbackProds } = await supabase
+          .from('products')
+          .select('id, name, price, active, stock')
+          .in('id', validDbIds);
+
+        if (fallbackProds && fallbackProds.length > 0) {
+          realProducts = fallbackProds as typeof realProducts;
+        }
+      }
+    }
+
+    // Complementar con MOCK_PRODUCTS para cualquier producto que no esté en la DB
+    const missingIds = productIds.filter((id) => !realProducts.some((p) => p.id === id));
+    if (missingIds.length > 0) {
+      const mockMatches = MOCK_PRODUCTS.filter((p) => missingIds.includes(p.id));
+      realProducts = [...realProducts, ...mockMatches];
     }
 
     if (realProducts.length === 0) {
-      return { success: false, error: 'No se encontraron los productos seleccionados en la base de datos.' };
+      return { success: false, error: 'No se encontraron los productos seleccionados en el catálogo.' };
     }
 
-    // 3. Recalcular subtotales y verificar que los productos estén activos
+    // 3. Recalcular subtotales con descuentos aplicados y verificar existencias
     let calculatedSubtotal = 0;
     const verifiedOrderItems: {
       product_id: string;
@@ -62,18 +83,23 @@ export async function createOrderAction(input: CreateOrderInput) {
       if (!dbProd || !dbProd.active) {
         return {
           success: false,
-          error: `El producto con ID ${item.product_id} no está disponible o ha sido desactivado.`,
+          error: `El producto "${dbProd?.name || item.product_id}" no está disponible actualmente.`,
         };
       }
 
-      const itemSubtotal = Number(dbProd.price) * item.quantity;
+      const hasDiscount = dbProd.discount !== undefined && Number(dbProd.discount) > 0;
+      const unitPrice = hasDiscount
+        ? Number(dbProd.price) * (1 - Number(dbProd.discount) / 100)
+        : Number(dbProd.price);
+
+      const itemSubtotal = unitPrice * item.quantity;
       calculatedSubtotal += itemSubtotal;
 
       verifiedOrderItems.push({
         product_id: dbProd.id,
         product_name: dbProd.name,
         quantity: item.quantity,
-        unit_price: Number(dbProd.price),
+        unit_price: unitPrice,
         subtotal: itemSubtotal,
       });
     }
@@ -89,7 +115,7 @@ export async function createOrderAction(input: CreateOrderInput) {
         order_number: orderNumber,
         customer_name: validatedData.customer_name,
         company_name: validatedData.company_name,
-        email: validatedData.email,
+        email: validatedData.email.toLowerCase().trim(),
         phone: validatedData.phone,
         address: validatedData.address || null,
         notes: validatedData.notes || null,
@@ -100,33 +126,41 @@ export async function createOrderAction(input: CreateOrderInput) {
       .select('id, order_number')
       .single();
 
-    if (orderError || !insertedOrder) {
-      // Si falla la inserción en DB real (por ejemplo sin llaves configuradas), retornar mock exitoso para no bloquear al usuario
+    if (orderError) {
+      console.error('[createOrderAction DB Order Error]:', orderError);
       return {
-        success: true,
-        orderNumber,
-        orderId: `mock-order-${Date.now()}`,
-        message: 'Solicitud de pedido registrada exitosamente.',
+        success: false,
+        error: `Error al registrar el pedido en la base de datos: ${orderError.message}. Asegúrate de ejecutar la migración SQL en Supabase para habilitar las políticas de pedidos.`,
+      };
+    }
+
+    if (!insertedOrder) {
+      return {
+        success: false,
+        error: 'No se recibió confirmación de guardado desde la base de datos.',
       };
     }
 
     // 5. Insertar los items del detalle del pedido
     const itemsToInsert = verifiedOrderItems.map((item) => ({
       order_id: insertedOrder.id,
-      product_id: item.product_id,
+      product_id: isPostgresUUID(item.product_id) ? item.product_id : null,
       product_name: item.product_name,
       quantity: item.quantity,
       unit_price: item.unit_price,
       subtotal: item.subtotal,
     }));
 
-    await supabase.from('order_items').insert(itemsToInsert);
+    const { error: itemsError } = await supabase.from('order_items').insert(itemsToInsert);
+    if (itemsError) {
+      console.error('[createOrderAction Items Insert Error]:', itemsError);
+    }
 
     return {
       success: true,
       orderNumber: insertedOrder.order_number,
       orderId: insertedOrder.id,
-      message: 'Solicitud de pedido registrada exitosamente.',
+      message: 'Solicitud de cotización y pedido guardada exitosamente en la base de datos.',
     };
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -139,5 +173,33 @@ export async function createOrderAction(input: CreateOrderInput) {
       success: false,
       error: 'Ocurrió un error al procesar el pedido. Por favor intente de nuevo.',
     };
+  }
+}
+
+export async function updateOrderStatusAction(orderId: string, status: string) {
+  try {
+    if (!orderId || !status) {
+      return { success: false, error: 'ID de pedido y estado requeridos.' };
+    }
+
+    const supabase = createAdminClient();
+    const { error } = await supabase
+      .from('orders')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', orderId);
+
+    if (error) {
+      console.error('[updateOrderStatusAction Error]:', error);
+      return { success: false, error: error.message };
+    }
+
+    revalidatePath('/admin/pedidos');
+    revalidatePath('/admin/dashboard');
+    revalidatePath('/historial-servicios');
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[updateOrderStatusAction Exception]:', err);
+    return { success: false, error: err.message || 'Error inesperado al actualizar estado.' };
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Lock, Mail, User, Building2, Phone, ShieldCheck, ArrowRight, UserPlus, LogIn } from 'lucide-react';
+import { X, Lock, Mail, User, Building2, Phone, ShieldCheck, ArrowRight, UserPlus, LogIn, Loader2 } from 'lucide-react';
 import { useUserAuthStore } from '@/features/auth/userAuthStore';
 import { useCartStore } from '@/features/cart/cartStore';
 import { Logo } from '@/components/ui/Logo';
@@ -25,6 +25,7 @@ export function LoginModal() {
   const [regPhone, setRegPhone] = useState('');
   const [regPassword, setRegPassword] = useState('');
 
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -33,17 +34,17 @@ export function LoginModal() {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setMessage(null);
     const cleanEmail = loginEmail.trim().toLowerCase();
     const cleanPassword = loginPassword.trim();
 
     if (!cleanEmail || !cleanPassword) return;
 
-    // Admin bypass (hardcoded admin)
+    // Admin bypass (hardcoded admin credentials)
     if (cleanEmail === 'estefaniacontreras@gmail.com') {
       if (cleanPassword === '132604') {
         document.cookie = 'admin_session=true; path=/; max-age=86400';
         try { localStorage.setItem('admin_session', 'true'); } catch {}
-        // No password arg = bypass mode
         login(cleanEmail, undefined, 'Estefanía Contreras', 'DOTACIONES & SUMINISTROS', 'ADMIN');
         closeLoginModal();
         window.location.href = '/admin/dashboard';
@@ -55,40 +56,57 @@ export function LoginModal() {
     }
 
     // Login normal contra Supabase
+    setLoading(true);
     try {
       await login(cleanEmail, cleanPassword);
       if (pendingProductToAdd) {
         addItem(pendingProductToAdd.product, pendingProductToAdd.quantity || 1);
       }
+      closeLoginModal();
     } catch (err: any) {
       const msg: string = err?.message || '';
       if (msg.toLowerCase().includes('invalid login credentials') || msg.toLowerCase().includes('invalid credentials')) {
-        setErrorMessage('Correo o contraseña incorrectos. Si acaba de registrarse, verifique su email y confirme la cuenta antes de iniciar sesión.');
+        setErrorMessage('Correo o contraseña incorrectos. Si acaba de registrarse, verifique si su cuenta requiere confirmación por correo electrónico.');
       } else if (msg.toLowerCase().includes('email not confirmed')) {
         setErrorMessage('Debe confirmar su correo electrónico antes de iniciar sesión. Revise su bandeja de entrada.');
       } else {
-        setErrorMessage(msg || 'Error al iniciar sesión. Intente de nuevo.');
+        setErrorMessage(msg || 'Error al iniciar sesión con Supabase. Intente de nuevo.');
       }
+    } finally {
+      setLoading(false);
     }
   };
-
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    if (!regEmail.trim() || !regName.trim() || !regPassword.trim()) return;
+    setMessage(null);
+    if (!regEmail.trim() || !regName.trim() || !regPassword.trim()) {
+      setErrorMessage('Por favor complete todos los campos obligatorios (*).');
+      return;
+    }
 
+    if (regPassword.length < 6) {
+      setErrorMessage('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    setLoading(true);
     const { signUp } = useUserAuthStore.getState();
     try {
       await signUp(regEmail.trim(), regPassword.trim(), regName.trim(), regCompany.trim(), regPhone.trim(), 'USER');
-      setMessage('¡Cuenta creada e iniciada exitosamente!');
+      setMessage('¡Cuenta creada e iniciada exitosamente en la base de datos!');
       if (pendingProductToAdd) {
         addItem(pendingProductToAdd.product, pendingProductToAdd.quantity || 1);
       }
-      closeLoginModal();
-    } catch (err) {
-      console.error(err);
-      setErrorMessage('Error al crear la cuenta.');
+      setTimeout(() => {
+        closeLoginModal();
+      }, 1000);
+    } catch (err: any) {
+      console.error('[Register Form Submit Error]:', err);
+      setErrorMessage(err?.message || 'Error al conectar con la base de datos de Supabase para registrar la cuenta.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -199,9 +217,18 @@ export function LoginModal() {
 
             <button
               type="submit"
-              className="w-full py-3.5 px-4 bg-[#0F172A] hover:bg-[#0284C7] text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full py-3.5 px-4 bg-[#0F172A] hover:bg-[#0284C7] text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
             >
-              Ingresar y Continuar <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Verificando credenciales...
+                </>
+              ) : (
+                <>
+                  Ingresar y Continuar <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
         )}
@@ -297,9 +324,18 @@ export function LoginModal() {
 
             <button
               type="submit"
-              className="w-full py-3.5 px-4 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+              disabled={loading}
+              className="w-full py-3.5 px-4 bg-[#F97316] hover:bg-[#EA580C] text-white font-extrabold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
             >
-              Registrar Cuenta y Continuar <ArrowRight className="w-4 h-4" />
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Creando cuenta en base de datos...
+                </>
+              ) : (
+                <>
+                  Registrar Cuenta y Continuar <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
         )}

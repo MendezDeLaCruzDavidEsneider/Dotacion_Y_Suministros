@@ -153,6 +153,7 @@ export function ProductTableClient({ initialProducts, categories }: ProductTable
                 <th className="p-4">Producto</th>
                 <th className="p-4">Categoría</th>
                 <th className="p-4">Precio COP</th>
+                <th className="p-4">Descuento</th>
                 <th className="p-4">Stock</th>
                 <th className="p-4">Estado</th>
                 <th className="p-4">Destacado</th>
@@ -162,7 +163,7 @@ export function ProductTableClient({ initialProducts, categories }: ProductTable
             <tbody className="divide-y divide-slate-100">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="p-10 text-center text-slate-400">
+                  <td colSpan={9} className="p-10 text-center text-slate-400">
                     No se encontraron productos en esta categoría o filtro.
                   </td>
                 </tr>
@@ -193,7 +194,27 @@ export function ProductTableClient({ initialProducts, categories }: ProductTable
                       </span>
                     </td>
                     <td className="p-4 font-extrabold text-[#0F172A]">
-                      {formatCurrency(prod.price)}
+                      {prod.discount && prod.discount > 0 ? (
+                        <div>
+                          <span className="line-through text-[11px] text-slate-400 block font-normal">
+                            {formatCurrency(prod.price)}
+                          </span>
+                          <span className="text-[#0284C7]">
+                            {formatCurrency(prod.price * (1 - prod.discount / 100))}
+                          </span>
+                        </div>
+                      ) : (
+                        formatCurrency(prod.price)
+                      )}
+                    </td>
+                    <td className="p-4">
+                      {prod.discount && prod.discount > 0 ? (
+                        <span className="inline-flex items-center gap-1 bg-orange-50 text-[#F97316] font-bold px-2 py-0.5 rounded-md text-[11px]">
+                          -{prod.discount}%
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-[11px]">0%</span>
+                      )}
                     </td>
                     <td className="p-4">
                       <span className={`font-bold ${prod.stock > 0 ? 'text-emerald-700' : 'text-amber-600'}`}>

@@ -33,33 +33,52 @@ export async function createProductAction(data: ProductFormData) {
     if (!data.category_id) return { success: false, error: 'Debe seleccionar una categoría.' };
     if (data.price === undefined || data.price < 0) return { success: false, error: 'El precio debe ser mayor o igual a 0.' };
     if (data.stock === undefined || data.stock < 0) return { success: false, error: 'El stock debe ser mayor o igual a 0.' };
-    if (data.discount !== undefined && (data.discount < 0 || data.discount > 100)) return { success: false, error: 'El descuento debe estar entre 0 y 100.' };
+    if (data.discount !== undefined && (data.discount < 0 || data.discount > 100)) return { success: false, error: 'El descuento debe estar entre 0 y 100%.' };
 
     const baseSlug = slugify(data.name);
     const uniqueSlug = `${baseSlug}-${Math.floor(100 + Math.random() * 900)}`;
 
     const supabase = createAdminClient();
 
-    const { data: newProd, error } = await supabase
+    const insertPayload: Record<string, any> = {
+      name: data.name.trim(),
+      slug: uniqueSlug,
+      category_id: data.category_id,
+      price: Number(data.price),
+      stock: Number(data.stock),
+      description: data.description?.trim() || '',
+      main_image_url: data.main_image_url?.trim() || null,
+      featured: data.featured ?? false,
+      active: data.active ?? true,
+    };
+
+    if (data.discount !== undefined && Number(data.discount) >= 0) {
+      insertPayload.discount = Number(data.discount);
+    }
+
+    let { data: newProd, error } = await supabase
       .from('products')
-      .insert({
-        name: data.name.trim(),
-        slug: uniqueSlug,
-        category_id: data.category_id,
-        price: Number(data.price),
-        discount: data.discount ?? 0,
-        stock: Number(data.stock),
-        description: data.description?.trim() || '',
-        main_image_url: data.main_image_url?.trim() || null,
-        featured: data.featured ?? false,
-        active: data.active ?? true,
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
+    // Si falla porque la columna discount aún no ha sido creada en PostgreSQL
+    if (error && (error.message?.includes('discount') || error.code === '42703')) {
+      console.warn('[createProductAction Warning]: La columna discount no existe en products. Reintentando sin discount...');
+      delete insertPayload.discount;
+      const retryResult = await supabase
+        .from('products')
+        .insert(insertPayload)
+        .select()
+        .single();
+
+      newProd = retryResult.data;
+      error = retryResult.error;
+    }
+
     if (error) {
-      console.error('Error insertando producto:', error);
-      return { success: false, error: error.message || 'Error al guardar el producto en la base de datos.' };
+      console.error('[createProductAction Error]:', error);
+      return { success: false, error: error.message || 'Error al guardar el producto en la base de datos de Supabase.' };
     }
 
     revalidatePath('/');
@@ -69,6 +88,7 @@ export async function createProductAction(data: ProductFormData) {
 
     return { success: true, data: newProd };
   } catch (err: any) {
+    console.error('[createProductAction Exception]:', err);
     return { success: false, error: err.message || 'Error inesperado al crear el producto.' };
   }
 }
@@ -78,27 +98,45 @@ export async function updateProductAction(id: string, data: ProductFormData) {
     if (!id) return { success: false, error: 'ID de producto no proporcionado.' };
     if (!data.name?.trim()) return { success: false, error: 'El nombre del producto es obligatorio.' };
     if (!data.category_id) return { success: false, error: 'Debe seleccionar una categoría.' };
+    if (data.discount !== undefined && (data.discount < 0 || data.discount > 100)) return { success: false, error: 'El descuento debe estar entre 0 y 100%.' };
 
     const supabase = createAdminClient();
 
-    const { error } = await supabase
+    const updatePayload: Record<string, any> = {
+      name: data.name.trim(),
+      category_id: data.category_id,
+      price: Number(data.price),
+      stock: Number(data.stock),
+      description: data.description?.trim() || '',
+      main_image_url: data.main_image_url?.trim() || null,
+      featured: data.featured ?? false,
+      active: data.active ?? true,
+    };
+
+    if (data.discount !== undefined && Number(data.discount) >= 0) {
+      updatePayload.discount = Number(data.discount);
+    }
+
+    let { error } = await supabase
       .from('products')
-      .update({
-        name: data.name.trim(),
-        category_id: data.category_id,
-        price: Number(data.price),
-        discount: data.discount ?? 0,
-        stock: Number(data.stock),
-        description: data.description?.trim() || '',
-        main_image_url: data.main_image_url?.trim() || null,
-        featured: data.featured ?? false,
-        active: data.active ?? true,
-      })
+      .update(updatePayload)
       .eq('id', id);
 
+    // Si falla porque la columna discount no existe en PostgreSQL
+    if (error && (error.message?.includes('discount') || error.code === '42703')) {
+      console.warn('[updateProductAction Warning]: La columna discount no existe en products. Reintentando sin discount...');
+      delete updatePayload.discount;
+      const retryResult = await supabase
+        .from('products')
+        .update(updatePayload)
+        .eq('id', id);
+
+      error = retryResult.error;
+    }
+
     if (error) {
-      console.error('Error actualizando producto:', error);
-      return { success: false, error: error.message || 'Error al actualizar el producto.' };
+      console.error('[updateProductAction Error]:', error);
+      return { success: false, error: error.message || 'Error al actualizar el producto en Supabase.' };
     }
 
     revalidatePath('/');
@@ -108,6 +146,7 @@ export async function updateProductAction(id: string, data: ProductFormData) {
 
     return { success: true };
   } catch (err: any) {
+    console.error('[updateProductAction Exception]:', err);
     return { success: false, error: err.message || 'Error inesperado al actualizar el producto.' };
   }
 }
