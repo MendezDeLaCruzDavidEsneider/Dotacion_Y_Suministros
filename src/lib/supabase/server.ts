@@ -28,8 +28,23 @@ export async function createClient() {
 
 export function createAdminClient() {
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const isServiceKeyValid = serviceKey && !serviceKey.includes('placeholder');
-  const keyToUse = isServiceKeyValid ? serviceKey : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+  // El service_role key de Supabase es siempre un JWT (comienza con "eyJ").
+  // Un Publishable Key ("sb_publishable_...") o un placeholder no tienen permisos admin.
+  const isServiceKeyValid =
+    typeof serviceKey === 'string' &&
+    serviceKey.startsWith('eyJ') &&
+    serviceKey.length > 100;
+
+  if (!isServiceKeyValid) {
+    console.warn(
+      '[createAdminClient] SUPABASE_SERVICE_ROLE_KEY inválido o no configurado. ' +
+      'Las operaciones de escritura sobre profiles pueden fallar por RLS. ' +
+      'Configura el service_role JWT real en .env.local'
+    );
+  }
+
+  const keyToUse = isServiceKeyValid ? serviceKey! : process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
   const { createClient: createSupabaseClient } = require('@supabase/supabase-js');
   return createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, keyToUse, {

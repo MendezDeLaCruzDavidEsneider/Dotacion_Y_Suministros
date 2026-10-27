@@ -43,6 +43,8 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  if (!hasMounted) return null;
+
   if (cartItems.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-4">
@@ -52,6 +54,32 @@ export default function CheckoutPage() {
           className="inline-block px-4 py-2 bg-[#0284C7] text-white text-xs font-bold rounded-xl"
         >
           Volver al Catálogo
+        </Link>
+      </div>
+    );
+  }
+
+  // Guard de autenticación: bloquear checkout si no hay sesión activa
+  if (!user) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-20 text-center space-y-6">
+        <div className="w-16 h-16 rounded-full bg-[#0284C7]/10 flex items-center justify-center mx-auto">
+          <ShieldCheck className="w-8 h-8 text-[#0284C7]" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-extrabold text-slate-900">Inicie sesión para continuar</h1>
+          <p className="text-sm text-slate-500">
+            Debe tener una cuenta activa para realizar una solicitud de cotización.
+          </p>
+        </div>
+        <button
+          onClick={() => useUserAuthStore.getState().openLoginModal()}
+          className="inline-flex items-center gap-2 px-6 py-3 bg-[#F97316] hover:bg-[#EA580C] text-white font-bold text-sm rounded-xl shadow-lg transition"
+        >
+          Iniciar Sesión / Registrarse
+        </button>
+        <Link href="/productos" className="block text-xs text-slate-400 hover:text-[#0284C7] transition">
+          ← Volver al catálogo
         </Link>
       </div>
     );

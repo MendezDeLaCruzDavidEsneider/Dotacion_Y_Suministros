@@ -5,12 +5,14 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { X, Trash2, Plus, Minus, ArrowRight, ShoppingBag } from 'lucide-react';
 import { useCartStore } from '@/features/cart/cartStore';
+import { useUserAuthStore } from '@/features/auth/userAuthStore';
 import { formatCurrency } from '@/lib/utils';
 import { useHydration } from '@/lib/useHydration';
 
 export function CartDrawer() {
   const hasMounted = useHydration();
   const { items, isOpen, closeCart, updateQuantity, removeItem, getSubtotal } = useCartStore();
+  const { user, openLoginModal } = useUserAuthStore();
   const subtotal = getSubtotal();
 
   if (!hasMounted || !isOpen) return null;
@@ -161,13 +163,20 @@ export function CartDrawer() {
                 >
                   Ver Carrito
                 </Link>
-                <Link
-                  href="/checkout"
-                  onClick={closeCart}
+                <button
+                  onClick={() => {
+                    closeCart();
+                    if (!user) {
+                      // Sin sesión: abrir modal de login
+                      openLoginModal();
+                    } else {
+                      window.location.href = '/checkout';
+                    }
+                  }}
                   className="w-full text-center py-2.5 px-3 bg-[#F97316] text-white font-bold text-xs rounded-lg hover:bg-[#F97316]/90 transition shadow-sm flex items-center justify-center gap-1"
                 >
                   Cotizar Ahora <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                </button>
               </div>
             </div>
           )}

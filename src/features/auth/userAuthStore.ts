@@ -84,14 +84,13 @@ export const useUserAuthStore = create<UserAuthState>()(
           }
 
           const userMeta = data.user.user_metadata || {};
-          const isKnownAdmin = email.toLowerCase() === 'estefaniacontreras@gmail.com';
 
           const userObj: UserSession = {
             name: profileData?.full_name || userMeta.full_name || email.split('@')[0],
             email: data.user.email || email,
             company: profileData?.company || userMeta.company || 'Empresa Solicitante',
             phone: profileData?.phone || userMeta.phone || '',
-            role: profileData?.role || (isKnownAdmin ? 'ADMIN' : 'USER'),
+            role: profileData?.role || 'USER',
           };
 
           set({ user: userObj, showLoginModal: false });
@@ -128,8 +127,7 @@ export const useUserAuthStore = create<UserAuthState>()(
             throw new Error(error.message);
           }
 
-          const isKnownAdmin = email.toLowerCase() === 'estefaniacontreras@gmail.com';
-          const assignedRole: 'ADMIN' | 'USER' = isKnownAdmin ? 'ADMIN' : role;
+          const assignedRole: 'ADMIN' | 'USER' = role;
 
           // Si hay sesión activa inmediata y se obtuvo ID de usuario, intentar actualizar perfil
           if (data?.user?.id && data.session) {

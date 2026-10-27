@@ -40,25 +40,24 @@ export function LoginModal() {
 
     if (!cleanEmail || !cleanPassword) return;
 
-    // Admin bypass (hardcoded admin credentials)
-    if (cleanEmail === 'estefaniacontreras@gmail.com') {
-      if (cleanPassword === '132604') {
-        document.cookie = 'admin_session=true; path=/; max-age=86400';
-        try { localStorage.setItem('admin_session', 'true'); } catch {}
-        login(cleanEmail, undefined, 'Estefanía Contreras', 'DOTACIONES & SUMINISTROS', 'ADMIN');
-        closeLoginModal();
-        window.location.href = '/admin/dashboard';
-        return;
-      } else {
-        setErrorMessage('Contraseña incorrecta para el usuario administrador.');
-        return;
-      }
-    }
 
     // Login normal contra Supabase
     setLoading(true);
     try {
       await login(cleanEmail, cleanPassword);
+
+      // Leer el rol actualizado desde el store tras el login
+      const loggedUser = useUserAuthStore.getState().user;
+
+      if (loggedUser?.role === 'ADMIN') {
+        // Usuario con rol ADMIN → redirigir al panel administrativo
+        document.cookie = 'admin_session=true; path=/; max-age=86400';
+        closeLoginModal();
+        window.location.href = '/admin/dashboard';
+        return;
+      }
+
+      // Usuario normal → agregar producto pendiente si existe y cerrar modal
       if (pendingProductToAdd) {
         addItem(pendingProductToAdd.product, pendingProductToAdd.quantity || 1);
       }

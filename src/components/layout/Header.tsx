@@ -238,7 +238,12 @@ export function Header() {
                   </Link>
 
                   <button
-                    onClick={logout}
+                    onClick={async () => {
+                      // Limpiar cookie de sesión admin si existía
+                      document.cookie = 'admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT';
+                      await logout();
+                      window.location.href = '/';
+                    }}
                     className="p-1 text-slate-400 hover:text-red-600 transition"
                     title="Cerrar Sesión"
                   >
@@ -324,9 +329,7 @@ export function Header() {
                 <ClipboardList className="w-4 h-4" /> Mis Servicios y Pedidos
               </Link>
             )}
-            <Link href="/admin/dashboard" onClick={() => setMobileMenuOpen(false)} className="px-2 py-1.5 text-slate-500 hover:bg-slate-50 rounded-md">
-              Panel Administrativo
-            </Link>
+
           </nav>
         </div>
       )}

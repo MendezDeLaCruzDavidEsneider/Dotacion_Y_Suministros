@@ -96,14 +96,7 @@ export function Footer() {
                   Acerca de Nuestra Empresa
                 </Link>
               </li>
-              <li className="pt-2">
-                <Link
-                  href="/admin/dashboard"
-                  className="inline-flex items-center gap-1.5 text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1.5 rounded-md transition text-[11px]"
-                >
-                  Acceso Administrativo
-                </Link>
-              </li>
+
             </ul>
           </div>
 
