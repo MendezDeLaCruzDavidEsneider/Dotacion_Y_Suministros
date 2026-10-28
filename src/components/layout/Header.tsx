@@ -63,13 +63,13 @@ export function Header() {
           </div>
 
           <div className="flex items-center gap-4 text-slate-300 text-[11px]">
-            <a href="tel:+573000000000" className="hover:text-white flex items-center gap-1 transition">
+            <a href="tel:+573208438654" className="hover:text-white flex items-center gap-1 transition">
               <Phone className="w-3 h-3 text-[#0284C7]" />
-              +57 300 000 0000
+              +57 320 8438654
             </a>
-            <a href="mailto:ventas@dotacionesysuministros.com" className="hover:text-white flex items-center gap-1 transition">
+            <a href="mailto:Dotacionessuministros16@gmail.com" className="hover:text-white flex items-center gap-1 transition">
               <Mail className="w-3 h-3 text-[#F97316]" />
-              ventas@dotacionesysuministros.com
+              Dotacionessuministros16@gmail.com
             </a>
           </div>
         </div>

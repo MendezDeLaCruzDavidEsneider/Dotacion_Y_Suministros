@@ -53,7 +53,7 @@ export default async function OrderConfirmedPage({ params }: OrderConfirmedPageP
 
           {/* Botón Exclusivo de WhatsApp */}
           <a
-            href={`https://wa.me/573000000000?text=${encodeURIComponent(
+            href={`https://wa.me/573228222162?text=${encodeURIComponent(
               `Hola, acabo de registrar la solicitud de pedido número ${id} en su página web y deseo confirmar la atención y despacho.`
             )}`}
             target="_blank"

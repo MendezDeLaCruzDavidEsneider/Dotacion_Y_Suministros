@@ -268,7 +268,7 @@ export default async function HomePage() {
                 </div>
                 <div>
                   <span className="block text-slate-400">Teléfono Directo:</span>
-                  <span className="text-sm font-bold text-white">+57 300 000 0000</span>
+                  <span className="text-sm font-bold text-white">+57 320 843 8654</span>
                 </div>
               </div>
               <div className="bg-slate-800/80 p-4 rounded-xl border border-slate-700 flex items-center gap-3">
@@ -277,7 +277,7 @@ export default async function HomePage() {
                 </div>
                 <div>
                   <span className="block text-slate-400">Correo Electrónico:</span>
-                  <span className="text-sm font-bold text-white">ventas@dotacionesysuministros.com</span>
+                  <span className="text-sm font-bold text-white">Dotacionessuministros16@gmail.com</span>
                 </div>
               </div>
             </div>

@@ -58,19 +58,19 @@ export function Footer() {
             <ul className="space-y-3 text-xs">
               <li className="flex items-start gap-2.5">
                 <MapPin className="w-4 h-4 text-[#F97316] shrink-0 mt-0.5" />
-                <span>Oficina Principal y Bodega de Despachos Comercial</span>
+                <span></span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Phone className="w-4 h-4 text-[#0284C7] shrink-0" />
-                <span>+57 300 000 0000 / (601) 000 0000</span>
+                <span>+57 320 8438654</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-[#F97316] shrink-0" />
-                <span>ventas@dotacionesysuministros.com</span>
+                <span>Dotacionessuministros16@gmail.com</span>
               </li>
               <li className="flex items-center gap-2.5">
                 <Clock className="w-4 h-4 text-[#0284C7] shrink-0" />
-                <span>Lunes a Viernes: 8:00 AM - 5:30 PM</span>
+                <span>Lunes a Viernes: 7:00 AM - 5:00 PM /Sabados: 8:00 AM - 1:00 PM</span>
               </li>
             </ul>
           </div>
