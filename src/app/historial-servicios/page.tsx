@@ -461,7 +461,7 @@ export default function HistorialServiciosPage() {
 
                 <div>
                   <a
-                    href={`https://wa.me/573000000000?text=${encodeURIComponent(
+                    href={`https://wa.me/573208438654?text=${encodeURIComponent(
                       `Hola, quisiera hacer seguimiento a mi cotización ${order.order_number} de la empresa ${order.company_name}.`
                     )}`}
                     target="_blank"
