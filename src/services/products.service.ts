@@ -7,15 +7,8 @@ export async function getProducts(options: ProductFilterOptions = {}): Promise<P
 
   try {
     const supabase = await createClient();
-    let query = supabase
-      .from('products')
-      .select('*, category:categories(*), product_features(*), product_images(*)')
-      .eq('active', true);
 
-    if (featuredOnly) {
-      query = query.eq('featured', true);
-    }
-
+    let categoryId: string | null = null;
     if (categorySlug) {
       const { data: categoryData } = await supabase
         .from('categories')
@@ -24,49 +17,81 @@ export async function getProducts(options: ProductFilterOptions = {}): Promise<P
         .single();
 
       if (categoryData) {
-        query = query.eq('category_id', categoryData.id);
+        categoryId = categoryData.id;
       }
     }
 
-    if (searchQuery && searchQuery.trim() !== '') {
-      query = query.ilike('name', `%${searchQuery.trim()}%`);
+    // Traer productos en lotes de 1000 para superar el límite por defecto de PostgREST
+    let allProducts: Product[] = [];
+    let from = 0;
+    const batchSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      let query = supabase
+        .from('products')
+        .select('*, category:categories(*)')
+        .eq('active', true)
+        .range(from, from + batchSize - 1);
+
+      if (featuredOnly) {
+        query = query.eq('featured', true);
+      }
+
+      if (categoryId) {
+        query = query.eq('category_id', categoryId);
+      }
+
+      if (searchQuery && searchQuery.trim() !== '') {
+        query = query.ilike('name', `%${searchQuery.trim()}%`);
+      }
+
+      if (minPrice !== undefined) {
+        query = query.gte('price', minPrice);
+      }
+
+      if (maxPrice !== undefined) {
+        query = query.lte('price', maxPrice);
+      }
+
+      // Ordenamiento
+      switch (sortBy) {
+        case 'price-asc':
+          query = query.order('price', { ascending: true });
+          break;
+        case 'price-desc':
+          query = query.order('price', { ascending: false });
+          break;
+        case 'name-asc':
+          query = query.order('name', { ascending: true });
+          break;
+        case 'name-desc':
+          query = query.order('name', { ascending: false });
+          break;
+        case 'newest':
+        default:
+          query = query.order('created_at', { ascending: false });
+          break;
+      }
+
+      const { data, error } = await query;
+
+      if (error || !data || data.length === 0) {
+        hasMore = false;
+      } else {
+        allProducts.push(...(data as Product[]));
+        from += batchSize;
+        if (data.length < batchSize) {
+          hasMore = false;
+        }
+      }
     }
 
-    if (minPrice !== undefined) {
-      query = query.gte('price', minPrice);
-    }
-
-    if (maxPrice !== undefined) {
-      query = query.lte('price', maxPrice);
-    }
-
-    // Ordenamiento
-    switch (sortBy) {
-      case 'price-asc':
-        query = query.order('price', { ascending: true });
-        break;
-      case 'price-desc':
-        query = query.order('price', { ascending: false });
-        break;
-      case 'name-asc':
-        query = query.order('name', { ascending: true });
-        break;
-      case 'name-desc':
-        query = query.order('name', { ascending: false });
-        break;
-      case 'newest':
-      default:
-        query = query.order('created_at', { ascending: false });
-        break;
-    }
-
-    const { data, error } = await query;
-
-    if (error || !data || data.length === 0) {
+    if (allProducts.length === 0) {
       return filterMockProducts(options);
     }
 
-    return data as Product[];
+    return allProducts;
   } catch {
     return filterMockProducts(options);
   }
@@ -151,7 +176,7 @@ function filterMockProducts(options: ProductFilterOptions): Product[] {
       result.sort((a, b) => b.price - a.price);
       break;
     case 'name-asc':
-      result.sort((a, b) => a.name.localeCompare(b.name));
+      result.sort((a, b) => a.name.localeCompare(a.name));
       break;
     case 'name-desc':
       result.sort((a, b) => b.name.localeCompare(a.name));

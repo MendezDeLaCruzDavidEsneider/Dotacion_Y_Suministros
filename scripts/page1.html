@@ -1,0 +1,41 @@
+<?php
+// Enviamos el código de estado 404 real para que Google no indexe esta página por error
+http_response_code(404);
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página no encontrada | Abastece.co</title>
+    <style>
+        body { font-family: 'Arial', sans-serif; background: #f6f7fb; color: #1f2a37; margin: 0; display: flex; align-items: center; justify-content: center; height: 100vh; text-align: center; }
+        .container { max-width: 500px; padding: 40px; background: #fff; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.05); }
+        h1 { font-size: 80px; margin: 0; color: #e5e7eb; }
+        h2 { font-size: 24px; margin: 10px 0; }
+        p { color: #6b7280; line-height: 1.6; margin-bottom: 30px; }
+        .btn { display: inline-block; padding: 12px 25px; background: #111827; color: #fff; text-decoration: none; border-radius: 10px; font-weight: bold; transition: background 0.2s; }
+        .btn:hover { background: #374151; }
+        .links { margin-top: 25px; font-size: 14px; }
+        .links a { color: #2563eb; text-decoration: none; margin: 0 10px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>404</h1>
+        <h2>¡Uy! No encontramos lo que buscabas</h2>
+        <p>Parece que el enlace que seguiste ya no existe o la dirección fue escrita incorrectamente.</p>
+        
+        <a href="https://www.abastece.co/" class="btn">Volver al inicio</a>
+
+        <div class="links">
+            <p>¿Buscas algo específico?</p>
+            <a href="/categoria/papeleria/">Papelería</a> | 
+            <a href="/categoria/aseo/">Aseo</a> | 
+            <a href="/categoria/cafeteria/">Cafetería</a>
+        </div>
+    </div>
+
+</body>
+</html>

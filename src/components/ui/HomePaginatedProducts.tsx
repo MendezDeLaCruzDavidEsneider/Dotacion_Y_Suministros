@@ -15,10 +15,11 @@ interface HomePaginatedProductsProps {
 export function HomePaginatedProducts({
   products,
   categories,
-  itemsPerPage = 8,
+  itemsPerPage: defaultItemsPerPage = 12,
 }: HomePaginatedProductsProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(defaultItemsPerPage);
   const sectionRef = useRef<HTMLDivElement>(null);
 
   // Filtrar productos según la categoría seleccionada
@@ -57,6 +58,45 @@ export function HomePaginatedProducts({
     return products.filter((p) => p.category?.slug === slug).length;
   };
 
+  // Algoritmo de paginación compacta y elegante (con elipsis ...)
+  const paginationRange = useMemo(() => {
+    const delta = 1; // Páginas a cada lado de la página actual
+    const range: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+      // Si son 7 páginas o menos, mostrar todas
+      for (let i = 1; i <= totalPages; i++) {
+        range.push(i);
+      }
+      return range;
+    }
+
+    const left = currentPage - delta;
+    const right = currentPage + delta;
+    const rangeWithDots: (number | string)[] = [];
+    let l: number | undefined;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= left && i <= right)) {
+        range.push(i);
+      }
+    }
+
+    for (const i of range) {
+      if (l) {
+        if (typeof i === 'number' && i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (typeof i === 'number' && i - l !== 1) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      if (typeof i === 'number') l = i;
+    }
+
+    return rangeWithDots;
+  }, [currentPage, totalPages]);
+
   return (
     <section ref={sectionRef} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 space-y-8">
       {/* Encabezado de la Sección */}
@@ -92,7 +132,7 @@ export function HomePaginatedProducts({
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
-          <span>Todos ({products.length})</span>
+          <span>Todos ({products.length.toLocaleString('es-CO')})</span>
         </button>
 
         {categories.map((cat) => {
@@ -110,11 +150,11 @@ export function HomePaginatedProducts({
             >
               <span>{cat.name}</span>
               <span
-                className={`text-[10px] px-2 py-0.5 rounded-full ${
-                  isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
                 }`}
               >
-                {count}
+                {count.toLocaleString('es-CO')}
               </span>
             </button>
           );
@@ -140,49 +180,90 @@ export function HomePaginatedProducts({
         </div>
       )}
 
-      {/* Barra de Paginación y Control de Visualización */}
+      {/* Barra de Paginación Compacta, Atractiva y Centrada */}
       {totalPages > 1 && (
-        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-xs flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
           {/* Indicador de Rango */}
-          <span className="text-xs font-medium text-slate-500">
-            Mostrando <strong className="text-slate-900">{startIndex + 1} - {endIndex}</strong> de{' '}
-            <strong className="text-slate-900">{filteredProducts.length}</strong> productos
-          </span>
+          <div className="flex items-center gap-3 text-xs text-slate-500">
+            <span>
+              Mostrando <strong className="text-slate-900 font-bold">{(startIndex + 1).toLocaleString('es-CO')} - {endIndex.toLocaleString('es-CO')}</strong> de{' '}
+              <strong className="text-slate-900 font-bold">{filteredProducts.length.toLocaleString('es-CO')}</strong> productos
+            </span>
 
-          {/* Controles de Navegación de Páginas */}
-          <div className="flex items-center gap-1.5">
+            {/* Selector de Items por página */}
+            <div className="hidden sm:flex items-center gap-1.5 pl-3 border-l border-slate-200">
+              <span className="text-[11px] text-slate-400">Ver:</span>
+              {[8, 12, 24, 48].map((size) => (
+                <button
+                  key={size}
+                  onClick={() => {
+                    setItemsPerPage(size);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-2 py-0.5 rounded text-[11px] font-bold transition cursor-pointer ${
+                    itemsPerPage === size
+                      ? 'bg-slate-900 text-white'
+                      : 'text-slate-500 hover:bg-slate-100'
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Controles de Navegación Compactos con Elipsis */}
+          <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap justify-center">
             {/* Botón Anterior */}
             <button
               onClick={() => handlePageChange(currentPage - 1)}
               disabled={currentPage === 1}
-              className="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+              className="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition flex items-center gap-1 cursor-pointer shadow-2xs"
+              title="Página anterior"
             >
               <ChevronLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Anterior</span>
             </button>
 
-            {/* Números de Página */}
+            {/* Números de Página con Elipsis */}
             <div className="flex items-center gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                <button
-                  key={pageNum}
-                  onClick={() => handlePageChange(pageNum)}
-                  className={`w-9 h-9 rounded-xl text-xs font-extrabold transition cursor-pointer ${
-                    currentPage === pageNum
-                      ? 'bg-[#0284C7] text-white shadow-sm'
-                      : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              ))}
+              {paginationRange.map((pageItem, idx) => {
+                if (pageItem === '...') {
+                  return (
+                    <span
+                      key={`dots-${idx}`}
+                      className="w-8 h-9 flex items-center justify-center text-xs font-bold text-slate-400 select-none"
+                    >
+                      •••
+                    </span>
+                  );
+                }
+
+                const pageNum = pageItem as number;
+                const isCurrent = currentPage === pageNum;
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => handlePageChange(pageNum)}
+                    className={`min-w-9 h-9 px-2 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+                      isCurrent
+                        ? 'bg-[#0284C7] text-white shadow-sm ring-2 ring-[#0284C7]/20'
+                        : 'border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-300'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Botón Siguiente */}
             <button
               onClick={() => handlePageChange(currentPage + 1)}
               disabled={currentPage === totalPages}
-              className="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition flex items-center gap-1 cursor-pointer"
+              className="px-3 py-2 rounded-xl text-xs font-bold border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-30 disabled:pointer-events-none transition flex items-center gap-1 cursor-pointer shadow-2xs"
+              title="Página siguiente"
             >
               <span className="hidden sm:inline">Siguiente</span>
               <ChevronRight className="w-4 h-4" />

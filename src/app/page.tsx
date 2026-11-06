@@ -14,6 +14,15 @@ export default async function HomePage() {
     getProducts(),
   ]);
 
+  // Extraer las primeras 6 imágenes reales de productos para el carrusel de cada categoría
+  const categoryPreviewsMap = categories.reduce((acc, cat) => {
+    acc[cat.id] = allProducts
+      .filter((p) => p.category_id === cat.id && p.main_image_url)
+      .slice(0, 6)
+      .map((p) => ({ image: p.main_image_url || '', name: p.name }));
+    return acc;
+  }, {} as Record<string, { image: string; name: string }[]>);
+
   return (
     <div className="space-y-16 pb-16">
       
@@ -196,7 +205,7 @@ export default async function HomePage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {categories.map((category) => (
-            <CategoryCard key={category.id} category={category} />
+            <CategoryCard key={category.id} category={category} previewImages={categoryPreviewsMap[category.id]} />
           ))}
         </div>
       </section>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -14,6 +14,8 @@ import {
   Loader2,
   AlertCircle,
   ImageIcon,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { Product, Category } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -32,15 +34,81 @@ export function ProductTableClient({ initialProducts, categories }: ProductTable
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const filteredProducts = products.filter((prod) => {
-    const matchesCategory =
-      selectedCategory === 'all' || prod.category_id === selectedCategory;
-    const matchesSearch =
-      !searchTerm.trim() ||
-      prod.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
-      (prod.category?.name && prod.category.name.toLowerCase().includes(searchTerm.toLowerCase().trim()));
-    return matchesCategory && matchesSearch;
-  });
+  // Estados de paginación
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(20);
+
+  // Filtrado de productos
+  const filteredProducts = useMemo(() => {
+    return products.filter((prod) => {
+      const matchesCategory =
+        selectedCategory === 'all' || prod.category_id === selectedCategory;
+      const matchesSearch =
+        !searchTerm.trim() ||
+        prod.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
+        prod.slug.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
+        (prod.category?.name && prod.category.name.toLowerCase().includes(searchTerm.toLowerCase().trim()));
+      return matchesCategory && matchesSearch;
+    });
+  }, [products, selectedCategory, searchTerm]);
+
+  // Cálculos de paginación
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = Math.min(startIndex + itemsPerPage, filteredProducts.length);
+  const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+
+  // Handlers que reinician la página a 1
+  const handleCategoryChange = (catId: string) => {
+    setSelectedCategory(catId);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+  };
+
+  // Algoritmo de paginación compacta con elipsis
+  const paginationRange = useMemo(() => {
+    const delta = 1;
+    const range: (number | string)[] = [];
+
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) range.push(i);
+      return range;
+    }
+
+    const left = currentPage - delta;
+    const right = currentPage + delta;
+    const rangeWithDots: (number | string)[] = [];
+    let l: number | undefined;
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= left && i <= right)) {
+        range.push(i);
+      }
+    }
+
+    for (const i of range) {
+      if (l) {
+        if (typeof i === 'number' && i - l === 2) {
+          rangeWithDots.push(l + 1);
+        } else if (typeof i === 'number' && i - l !== 1) {
+          rangeWithDots.push('...');
+        }
+      }
+      rangeWithDots.push(i);
+      if (typeof i === 'number') l = i;
+    }
+
+    return rangeWithDots;
+  }, [currentPage, totalPages]);
 
   const handleDelete = async (productId: string, productName: string) => {
     const confirmDelete = window.confirm(
@@ -77,7 +145,7 @@ export function ProductTableClient({ initialProducts, categories }: ProductTable
             Gestión Integral de Productos
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Cree, edite y elimine productos en cada categoría en tiempo real con Supabase.
+            Administre, edite y filtre su catálogo de {products.length.toLocaleString('es-CO')} productos en tiempo real con Supabase.
           </p>
         </div>
         <Link
@@ -95,20 +163,20 @@ export function ProductTableClient({ initialProducts, categories }: ProductTable
         </div>
       )}
 
-      {/* Barra de Filtros: Búsqueda y Pestañas por Categoría */}
-      <div className="flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+      {/* Barra de Filtros: Pestañas por Categoría y Buscador */}
+      <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center gap-4 bg-slate-50 p-3 rounded-2xl border border-slate-200">
         {/* Selector de Categorías */}
         <div className="flex flex-wrap gap-1.5">
           <button
             type="button"
-            onClick={() => setSelectedCategory('all')}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+            onClick={() => handleCategoryChange('all')}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
               selectedCategory === 'all'
                 ? 'bg-[#0F172A] text-white shadow-xs'
                 : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            Todas ({products.length})
+            Todas ({products.length.toLocaleString('es-CO')})
           </button>
           {categories.map((cat) => {
             const count = products.filter((p) => p.category_id === cat.id).length;
@@ -117,33 +185,40 @@ export function ProductTableClient({ initialProducts, categories }: ProductTable
               <button
                 key={cat.id}
                 type="button"
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
+                onClick={() => handleCategoryChange(cat.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
                   isSelected
                     ? 'bg-[#0284C7] text-white shadow-xs'
                     : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
                 }`}
               >
-                {cat.name} ({count})
+                <span>{cat.name}</span>
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+                    isSelected ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'
+                  }`}
+                >
+                  {count.toLocaleString('es-CO')}
+                </span>
               </button>
             );
           })}
         </div>
 
         {/* Buscador */}
-        <div className="relative min-w-[240px]">
+        <div className="relative min-w-[280px]">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
           <input
             type="text"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Buscar por nombre..."
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="Buscar por nombre o referencia..."
             className="w-full pl-9 pr-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-medium focus:ring-2 focus:ring-[#0284C7] focus:outline-hidden"
           />
         </div>
       </div>
 
-      {/* Tabla de Productos */}
+      {/* Tabla de Productos con Paginación */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600">
@@ -161,14 +236,14 @@ export function ProductTableClient({ initialProducts, categories }: ProductTable
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredProducts.length === 0 ? (
+              {paginatedProducts.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="p-10 text-center text-slate-400">
                     No se encontraron productos en esta categoría o filtro.
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((prod) => (
+                paginatedProducts.map((prod) => (
                   <tr key={prod.id} className="hover:bg-slate-50/80 transition">
                     <td className="p-4 w-14">
                       <div className="w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center shrink-0">
@@ -178,6 +253,7 @@ export function ProductTableClient({ initialProducts, categories }: ProductTable
                             src={prod.main_image_url}
                             alt={prod.name}
                             className="w-full h-full object-cover"
+                            loading="lazy"
                           />
                         ) : (
                           <ImageIcon className="w-5 h-5 text-slate-300" />
@@ -185,7 +261,7 @@ export function ProductTableClient({ initialProducts, categories }: ProductTable
                       </div>
                     </td>
                     <td className="p-4 font-bold text-slate-900 max-w-xs">
-                      <span className="block truncate">{prod.name}</span>
+                      <span className="block truncate" title={prod.name}>{prod.name}</span>
                       <span className="text-[10px] text-slate-400 font-mono block">/{prod.slug}</span>
                     </td>
                     <td className="p-4">
@@ -272,6 +348,90 @@ export function ProductTableClient({ initialProducts, categories }: ProductTable
             </tbody>
           </table>
         </div>
+
+        {/* Barra de Paginación en Panel Admin */}
+        {totalPages > 1 && (
+          <div className="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+            {/* Indicador de Rango y Selector de Items por página */}
+            <div className="flex items-center gap-3 text-xs text-slate-500">
+              <span>
+                Mostrando <strong className="text-slate-900 font-bold">{(startIndex + 1).toLocaleString('es-CO')} - {endIndex.toLocaleString('es-CO')}</strong> de{' '}
+                <strong className="text-slate-900 font-bold">{filteredProducts.length.toLocaleString('es-CO')}</strong> productos
+              </span>
+
+              <div className="flex items-center gap-1 pl-3 border-l border-slate-200">
+                <span className="text-[11px] text-slate-400">Filas:</span>
+                {[15, 30, 50, 100].map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => {
+                      setItemsPerPage(size);
+                      setCurrentPage(1);
+                    }}
+                    className={`px-2 py-0.5 rounded text-[11px] font-bold transition cursor-pointer ${
+                      itemsPerPage === size
+                        ? 'bg-slate-900 text-white'
+                        : 'text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Controles de Navegación Compactos con Elipsis */}
+            <div className="flex items-center gap-1.5 flex-wrap justify-center">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 text-slate-700 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition flex items-center gap-1 cursor-pointer"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" /> Anterior
+              </button>
+
+              <div className="flex items-center gap-1">
+                {paginationRange.map((pageItem, idx) => {
+                  if (pageItem === '...') {
+                    return (
+                      <span
+                        key={`dots-${idx}`}
+                        className="w-7 h-8 flex items-center justify-center text-xs font-bold text-slate-400 select-none"
+                      >
+                        •••
+                      </span>
+                    );
+                  }
+
+                  const pageNum = pageItem as number;
+                  const isCurrent = currentPage === pageNum;
+
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => handlePageChange(pageNum)}
+                      className={`min-w-8 h-8 px-2 rounded-xl text-xs font-extrabold transition cursor-pointer ${
+                        isCurrent
+                          ? 'bg-[#0284C7] text-white shadow-xs'
+                          : 'border border-slate-200 text-slate-700 bg-white hover:bg-slate-100'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold border border-slate-200 text-slate-700 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none transition flex items-center gap-1 cursor-pointer"
+              >
+                Siguiente <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
