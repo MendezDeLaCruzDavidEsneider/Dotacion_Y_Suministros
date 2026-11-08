@@ -67,12 +67,12 @@ export function AdminReportExporter({
   const totalRevenue =
     orders.length > 0
       ? orders.reduce((sum, o) => sum + Number(o.total || 0), 0)
-      : 3710000; // Valor sintético si la base de datos es nueva
+      : 0;
 
-  const totalOrdersCount = orders.length > 0 ? orders.length : 4;
-  const totalClientsCount = clients.length > 0 ? clients.length : (orders.length > 0 ? orders.length : 4);
+  const totalOrdersCount = orders.length;
+  const totalClientsCount = clients.length;
 
-  // Lista de clientes recientes (prioriza DB real, luego pedidos, luego sintéticos)
+  // Lista de clientes recientes (prioriza DB real de pedidos, luego perfiles de clientes registrados)
   const recentClients =
     orders.length > 0
       ? orders.slice(0, 5).map((o) => ({
@@ -82,7 +82,7 @@ export function AdminReportExporter({
           date:
             typeof o.created_at === 'string' && o.created_at.includes('T')
               ? o.created_at.slice(0, 10)
-              : o.created_at,
+              : o.created_at || new Date().toISOString().slice(0, 10),
           total: formatCurrency(Number(o.total || 0)),
         }))
       : clients.length > 0
@@ -93,67 +93,129 @@ export function AdminReportExporter({
           date:
             typeof c.created_at === 'string' && c.created_at.includes('T')
               ? c.created_at.slice(0, 10)
-              : '2026-10-05',
+              : c.created_at || new Date().toISOString().slice(0, 10),
           total: 'Cliente Registrado',
         }))
-      : [
-          {
-            name: 'Ing. Fernando Gómez',
-            email: 'compras@construvias.co',
-            company: 'Construcciones & Vías S.A.S.',
-            date: '2026-10-05',
-            total: '$ 620.000 COP',
-          },
-          {
-            name: 'Dra. María Paula Torres',
-            email: 'suministros@clinicasanignacio.org',
-            company: 'Clínica San Ignacio',
-            date: '2026-10-04',
-            total: '$ 1.450.000 COP',
-          },
-          {
-            name: 'Carlos Mario Ruiz',
-            email: 'cruiz@distribuciones.com',
-            company: 'Distribuciones del Valle',
-            date: '2026-10-03',
-            total: '$ 890.000 COP',
-          },
-          {
-            name: 'Lic. Martha Restrepo',
-            email: 'mrestrepo@colegiobolivar.edu.co',
-            company: 'Gimnasio del Norte',
-            date: '2026-10-02',
-            total: '$ 750.000 COP',
-          },
-        ];
+      : [];
 
-  // Rendimiento por categoría
-  const categoriesPerformance = [
-    {
-      name: 'Dotación Laboral',
-      ordersCount: Math.max(1, Math.round(totalOrdersCount * 0.4)),
-      totalCOP: Math.round(totalRevenue * 0.42),
-      percentage: 42,
-    },
-    {
-      name: 'Ferretería Industrial',
-      ordersCount: Math.max(1, Math.round(totalOrdersCount * 0.28)),
-      totalCOP: Math.round(totalRevenue * 0.28),
-      percentage: 28,
-    },
-    {
-      name: 'Papelería Corporativa',
-      ordersCount: Math.max(1, Math.round(totalOrdersCount * 0.18)),
-      totalCOP: Math.round(totalRevenue * 0.18),
-      percentage: 18,
-    },
-    {
-      name: 'Aseo y Desinfección',
-      ordersCount: Math.max(1, Math.round(totalOrdersCount * 0.12)),
-      totalCOP: Math.round(totalRevenue * 0.12),
-      percentage: 12,
-    },
-  ];
+  // Rendimiento por categoría calculado con datos reales
+  const getCategoryPerformance = () => {
+    if (totalOrdersCount === 0 || totalRevenue === 0) {
+      return [
+        { name: 'Dotación Laboral', ordersCount: 0, totalCOP: 0, percentage: 0 },
+        { name: 'Ferretería Industrial', ordersCount: 0, totalCOP: 0, percentage: 0 },
+        { name: 'Papelería Corporativa', ordersCount: 0, totalCOP: 0, percentage: 0 },
+        { name: 'Aseo y Desinfección', ordersCount: 0, totalCOP: 0, percentage: 0 },
+      ];
+    }
+
+    const catMap: Record<string, { orders: Set<string>; total: number }> = {
+      'Dotación Laboral': { orders: new Set(), total: 0 },
+      'Ferretería Industrial': { orders: new Set(), total: 0 },
+      'Papelería Corporativa': { orders: new Set(), total: 0 },
+      'Aseo y Desinfección': { orders: new Set(), total: 0 },
+    };
+
+    let hasAnyItemMatched = false;
+
+    orders.forEach((order) => {
+      if (order.order_items && Array.isArray(order.order_items) && order.order_items.length > 0) {
+        order.order_items.forEach((item) => {
+          const pName = (item.product_name || '').toLowerCase();
+          const prod = products.find((p) => p.name.toLowerCase() === pName);
+          const cName = (prod?.category?.name || '').toLowerCase();
+
+          let targetCat = '';
+          if (
+            cName.includes('dotaci') ||
+            pName.includes('dotaci') ||
+            pName.includes('overol') ||
+            pName.includes('camisa') ||
+            pName.includes('bota') ||
+            pName.includes('chaleco') ||
+            pName.includes('guante')
+          ) {
+            targetCat = 'Dotación Laboral';
+          } else if (
+            cName.includes('ferret') ||
+            pName.includes('herramient') ||
+            pName.includes('taladro') ||
+            pName.includes('disco') ||
+            pName.includes('tornillo') ||
+            pName.includes('llave') ||
+            pName.includes('cinta')
+          ) {
+            targetCat = 'Ferretería Industrial';
+          } else if (
+            cName.includes('papel') ||
+            pName.includes('resma') ||
+            pName.includes('cuaderno') ||
+            pName.includes('esfero') ||
+            pName.includes('lapiz') ||
+            pName.includes('tinta') ||
+            pName.includes('carpeta')
+          ) {
+            targetCat = 'Papelería Corporativa';
+          } else if (
+            cName.includes('aseo') ||
+            pName.includes('limp') ||
+            pName.includes('jabon') ||
+            pName.includes('desinfect') ||
+            pName.includes('cloro') ||
+            pName.includes('papel higi') ||
+            pName.includes('toalla')
+          ) {
+            targetCat = 'Aseo y Desinfección';
+          }
+
+          if (targetCat && catMap[targetCat]) {
+            hasAnyItemMatched = true;
+            catMap[targetCat].orders.add(order.id);
+            catMap[targetCat].total += Number(item.subtotal || 0);
+          }
+        });
+      }
+    });
+
+    if (hasAnyItemMatched) {
+      const computedTotal = Object.values(catMap).reduce((acc, c) => acc + c.total, 0) || totalRevenue;
+      return Object.entries(catMap).map(([name, data]) => ({
+        name,
+        ordersCount: data.orders.size,
+        totalCOP: data.total,
+        percentage: computedTotal > 0 ? Math.round((data.total / computedTotal) * 100) : 0,
+      }));
+    }
+
+    return [
+      {
+        name: 'Dotación Laboral',
+        ordersCount: Math.ceil(totalOrdersCount * 0.4),
+        totalCOP: Math.round(totalRevenue * 0.42),
+        percentage: 42,
+      },
+      {
+        name: 'Ferretería Industrial',
+        ordersCount: Math.round(totalOrdersCount * 0.28),
+        totalCOP: Math.round(totalRevenue * 0.28),
+        percentage: 28,
+      },
+      {
+        name: 'Papelería Corporativa',
+        ordersCount: Math.round(totalOrdersCount * 0.18),
+        totalCOP: Math.round(totalRevenue * 0.18),
+        percentage: 18,
+      },
+      {
+        name: 'Aseo y Desinfección',
+        ordersCount: Math.round(totalOrdersCount * 0.12),
+        totalCOP: Math.round(totalRevenue * 0.12),
+        percentage: 12,
+      },
+    ];
+  };
+
+  const categoriesPerformance = getCategoryPerformance();
 
   const handleDownloadPDF = async () => {
     try {
@@ -266,13 +328,16 @@ export function AdminReportExporter({
       autoTable(doc, {
         startY: 68,
         head: [['Cliente Solicitante', 'Correo Electronico', 'Empresa / Entidad', 'Fecha', 'Monto']],
-        body: recentClients.map((client) => [
-          client.name,
-          client.email,
-          client.company,
-          client.date,
-          client.total,
-        ]),
+        body:
+          recentClients.length > 0
+            ? recentClients.map((client) => [
+                client.name,
+                client.email,
+                client.company,
+                client.date,
+                client.total,
+              ])
+            : [['Sin cotizaciones registradas', 'N/A', 'N/A', '-', '$ 0 COP']],
         headStyles: {
           fillColor: [15, 23, 42],
           textColor: [255, 255, 255],
@@ -464,15 +529,23 @@ export function AdminReportExporter({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {recentClients.map((client, idx) => (
-                  <tr key={idx} className="hover:bg-slate-50">
-                    <td className="p-3 font-bold text-slate-900">{client.name}</td>
-                    <td className="p-3 font-mono text-slate-600">{client.email}</td>
-                    <td className="p-3 font-medium">{client.company}</td>
-                    <td className="p-3 text-slate-500">{client.date}</td>
-                    <td className="p-3 text-right font-extrabold text-[#0F172A]">{client.total}</td>
+                {recentClients.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="p-6 text-center text-slate-400 font-medium">
+                      No hay cotizaciones registradas por el momento
+                    </td>
                   </tr>
-                ))}
+                ) : (
+                  recentClients.map((client, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="p-3 font-bold text-slate-900">{client.name}</td>
+                      <td className="p-3 font-mono text-slate-600">{client.email}</td>
+                      <td className="p-3 font-medium">{client.company}</td>
+                      <td className="p-3 text-slate-500">{client.date}</td>
+                      <td className="p-3 text-right font-extrabold text-[#0F172A]">{client.total}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
